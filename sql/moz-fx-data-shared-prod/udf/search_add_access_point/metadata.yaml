@@ -1,0 +1,4 @@
+---
+description: Parse out engine from search key and add access point to source
+  > to get engine, source, value struct compatible with search_counts_map_sum udf
+friendly_name: Search Add Access Point

@@ -378,6 +378,39 @@ clients_summary AS (
     payload.processes.parent.keyed_scalars.devtools_accessibility_select_accessible_for_node AS scalar_parent_devtools_accessibility_select_accessible_for_node,
     payload.processes.parent.keyed_scalars.telemetry_event_counts AS scalar_parent_telemetry_event_counts,
     payload.processes.content.keyed_scalars.telemetry_event_counts AS scalar_content_telemetry_event_counts,
+    payload.processes.parent.keyed_scalars.browser_search_content_urlbar,
+    payload.processes.parent.keyed_scalars.browser_search_content_urlbar_searchmode,
+    payload.processes.parent.keyed_scalars.browser_search_content_contextmenu,
+    payload.processes.parent.keyed_scalars.browser_search_content_about_home,
+    payload.processes.parent.keyed_scalars.browser_search_content_about_newtab,
+    payload.processes.parent.keyed_scalars.browser_search_content_searchbar,
+    payload.processes.parent.keyed_scalars.browser_search_content_system,
+    payload.processes.parent.keyed_scalars.browser_search_content_webextension,
+    payload.processes.parent.keyed_scalars.browser_search_content_tabhistory,
+    payload.processes.parent.keyed_scalars.browser_search_content_reload,
+    payload.processes.parent.keyed_scalars.browser_search_content_unknown,
+    payload.processes.parent.keyed_scalars.browser_search_withads_urlbar,
+    payload.processes.parent.keyed_scalars.browser_search_withads_urlbar_searchmode,
+    payload.processes.parent.keyed_scalars.browser_search_withads_contextmenu,
+    payload.processes.parent.keyed_scalars.browser_search_withads_about_home,
+    payload.processes.parent.keyed_scalars.browser_search_withads_about_newtab,
+    payload.processes.parent.keyed_scalars.browser_search_withads_searchbar,
+    payload.processes.parent.keyed_scalars.browser_search_withads_system,
+    payload.processes.parent.keyed_scalars.browser_search_withads_webextension,
+    payload.processes.parent.keyed_scalars.browser_search_withads_tabhistory,
+    payload.processes.parent.keyed_scalars.browser_search_withads_reload,
+    payload.processes.parent.keyed_scalars.browser_search_withads_unknown,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_urlbar,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_urlbar_searchmode,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_contextmenu,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_about_home,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_about_newtab,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_searchbar,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_system,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_webextension,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_tabhistory,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_reload,
+    payload.processes.parent.keyed_scalars.browser_search_adclicks_unknown,
     count_histograms[OFFSET(0)].histogram AS histogram_parent_devtools_aboutdebugging_opened_count,
     count_histograms[
       OFFSET(1)
@@ -955,6 +988,51 @@ aggregates AS (
     mozfun.stats.mode_last(
       ARRAY_AGG(user_pref_browser_search_region)
     ) AS user_pref_browser_search_region,
+    udf.search_counts_map_sum(
+      ARRAY_CONCAT(
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_urlbar), 'urlbar'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_urlbar_searchmode), 'urlbar_searchmode'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_contextmenu), 'contextmenu'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_about_home), 'about_home'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_about_newtab), 'about_newtab'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_searchbar), 'searchbar'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_system), 'system'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_webextension), 'webextension'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_tabhistory), 'tabhistory'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_reload), 'reload'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_content_unknown), 'unknown')
+      )
+    ) AS search_in_content_with_access_point,
+    udf.search_counts_map_sum(
+      ARRAY_CONCAT(
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_urlbar), 'urlbar'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_urlbar_searchmode), 'urlbar_searchmode'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_contextmenu), 'contextmenu'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_about_home), 'about_home'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_about_newtab), 'about_newtab'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_searchbar), 'searchbar'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_system), 'system'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_webextension), 'webextension'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_tabhistory), 'tabhistory'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_reload), 'reload'),
+        udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_withads_unknown), 'unknown')
+      )
+    ) AS search_withads_with_access_point,
+    udf.search_counts_map_sum(
+      ARRAY_CONCAT(
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_urlbar), 'urlbar'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_urlbar_searchmode), 'urlbar_searchmode'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_contextmenu), 'contextmenu'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_about_home), 'about_home'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_about_newtab), 'about_newtab'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_searchbar), 'searchbar'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_system), 'system'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_webextension), 'webextension'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_tabhistory), 'tabhistory'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_reload), 'reload'),
+       udf.search_add_access_point(ARRAY_CONCAT_AGG(browser_search_adclicks_unknown), 'unknown')
+      )
+    ) AS search_ad_clicks_with_access_point,
   FROM
     clients_summary
   GROUP BY
