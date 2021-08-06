@@ -46,7 +46,52 @@ CREATE TEMP FUNCTION organicize_source_or_type(engine STRING, original STRING) A
   END
 );
 
-WITH augmented AS (
+WITH combined_access_point AS (
+  SELECT
+    *,
+    ARRAY_CONCAT(
+      add_access_point(search_content_urlbar_sum, 'urlbar'),
+      add_access_point(search_content_urlbar_searchmode_sum, 'urlbar_searchmode'),
+      add_access_point(search_content_contextmenu_sum, 'contextmenu'),
+      add_access_point(search_content_about_home_sum, 'about_home'),
+      add_access_point(search_content_about_newtab_sum, 'about_newtab'),
+      add_access_point(search_content_searchbar_sum, 'searchbar'),
+      add_access_point(search_content_system_sum, 'system'),
+      add_access_point(search_content_webextension_sum, 'webextension'),
+      add_access_point(search_content_tabhistory_sum, 'tabhistory'),
+      add_access_point(search_content_reload_sum, 'reload'),
+      add_access_point(search_content_unknown_sum, 'unknown')
+    ) AS in_content_with_sap,
+    ARRAY_CONCAT(
+      add_access_point(search_withads_urlbar_sum, 'urlbar'),
+      add_access_point(search_withads_urlbar_searchmode_sum, 'urlbar_searchmode'),
+      add_access_point(search_withads_contextmenu_sum, 'contextmenu'),
+      add_access_point(search_withads_about_home_sum, 'about_home'),
+      add_access_point(search_withads_about_newtab_sum, 'about_newtab'),
+      add_access_point(search_withads_searchbar_sum, 'searchbar'),
+      add_access_point(search_withads_system_sum, 'system'),
+      add_access_point(search_withads_webextension_sum, 'webextension'),
+      add_access_point(search_withads_tabhistory_sum, 'tabhistory'),
+      add_access_point(search_withads_reload_sum, 'reload'),
+      add_access_point(search_withads_unknown_sum, 'unknown')
+    ) AS search_with_ads_with_sap,
+    ARRAY_CONCAT(
+      add_access_point(search_adclicks_urlbar_sum, 'urlbar'),
+      add_access_point(search_adclicks_urlbar_searchmode_sum, 'urlbar_searchmode'),
+      add_access_point(search_adclicks_contextmenu_sum, 'contextmenu'),
+      add_access_point(search_adclicks_about_home_sum, 'about_home'),
+      add_access_point(search_adclicks_about_newtab_sum, 'about_newtab'),
+      add_access_point(search_adclicks_searchbar_sum, 'searchbar'),
+      add_access_point(search_adclicks_system_sum, 'system'),
+      add_access_point(search_adclicks_webextension_sum, 'webextension'),
+      add_access_point(search_adclicks_tabhistory_sum, 'tabhistory'),
+      add_access_point(search_adclicks_reload_sum, 'reload'),
+      add_access_point(search_adclicks_unknown_sum, 'unknown')
+    ) AS ad_clicks_with_sap,
+  FROM
+    telemetry.clients_daily
+),
+augmented AS (
   SELECT
     *,
     ARRAY_CONCAT(
@@ -75,14 +120,13 @@ WITH augmented AS (
           THEN
             'sap'
           WHEN
-            (STARTS_WITH(element.source, 'in-content:sap:') OR STARTS_WITH(element.source, 'sap:'))
+            STARTS_WITH(element.source, 'in-content:sap:')
+            OR STARTS_WITH(element.source, 'sap:')
           THEN
             'tagged-sap'
           WHEN
-            (
-              STARTS_WITH(element.source, 'in-content:sap-follow-on:')
-              OR STARTS_WITH(element.source, 'follow-on:')
-            )
+            STARTS_WITH(element.source, 'in-content:sap-follow-on:')
+            OR STARTS_WITH(element.source, 'follow-on:')
           THEN
             'tagged-follow-on'
           WHEN
@@ -103,28 +147,62 @@ WITH augmented AS (
           AS type
         FROM
           UNNEST(search_counts) AS element
+        WHERE
+          ARRAY_LENGTH(in_content_with_sap) = 0
+          OR NOT STARTS_WITH(element.source, 'in-content:')
       ),
       ARRAY(
         SELECT AS STRUCT
-          organicize_source_or_type(key, "ad-click:") AS source,
-          normalize_engine(key) AS engine,
+          CONCAT('in-content:', SUBSTR(key, STRPOS(key, ':') + 1)) AS source,
+          SPLIT(key, ':')[OFFSET(0)] AS engine,
           value AS count,
-          organicize_source_or_type(key, "ad-click") AS type
+          CASE
+          WHEN
+            REGEXP_CONTAINS(key, ':tagged:')
+          THEN
+            'tagged-sap'
+          WHEN
+            REGEXP_CONTAINS(key, ':tagged-follow-on:')
+          THEN
+            'tagged-follow-on'
+          WHEN
+            REGEXP_CONTAINS(key, ':organic:')
+          THEN
+            'organic'
+          ELSE
+            'unknown'
+          END
+          AS type
         FROM
-          UNNEST(ad_clicks)
+          UNNEST(in_content_with_sap)
       ),
       ARRAY(
         SELECT AS STRUCT
-          organicize_source_or_type(key, "search-with-ads:") AS source,
-          normalize_engine(key) AS engine,
+          CONCAT('ad-click:', COALESCE(SPLIT(key, ':')[SAFE_OFFSET(1)], '')) AS source,
+          SPLIT(key, ':')[OFFSET(0)] AS engine,
           value AS count,
-          organicize_source_or_type(key, "search-with-ads") AS type
+          CONCAT('ad-click', IF(REGEXP_CONTAINS(key, ':organic'), ':organic', '')) AS type
         FROM
-          UNNEST(search_with_ads)
+          UNNEST(IF(ARRAY_LENGTH(ad_clicks_with_sap) = 0, ad_clicks, ad_clicks_with_sap))
+      ),
+      ARRAY(
+        SELECT AS STRUCT
+          CONCAT('search-with-ads:', COALESCE(SPLIT(key, ':')[SAFE_OFFSET(1)], '')) AS source,
+          SPLIT(key, ':')[OFFSET(0)] AS engine,
+          value AS count,
+          CONCAT('search-with-ads', IF(REGEXP_CONTAINS(key, ':organic'), ':organic', '')) AS type
+        FROM
+          UNNEST(
+            IF(
+              ARRAY_LENGTH(search_with_ads_with_sap) = 0,
+              search_with_ads,
+              search_with_ads_with_sap
+            )
+          )
       )
     ) AS _searches,
   FROM
-    telemetry.clients_daily
+    combined_access_point
 ),
 flattened AS (
   SELECT
