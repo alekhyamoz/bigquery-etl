@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS
-  `moz-fx-data-shared-prod.telemetry_derived.clients_histogram_aggregates_v2` (
+  `moz-fx-data-shared-prod.telemetry_derived.clients_histogram_aggregates_v1` (
     submission_date DATE,
     sample_id INT64,
     client_id STRING,
